@@ -1,17 +1,31 @@
+#include <memory>
+#include <iostream>
 #include <gtest/gtest.h>
+
+
+using namespace std;
 
 
 TEST(creation, invalid)
 {
-    FAIL();
+    ASSERT_THROW(
+        AudioStream stream(0);
+    , AudioStream::Exception::BadAlloc);
 }
 
 TEST(creation, valid)
 {
+    ASSERT_NO_THROW(
+        AudioStream stream(1024);
+    );
+}
+
+TEST(connection, not_ready_server)
+{
     FAIL();
 }
 
-TEST(status, connection)
+TEST(connection, ready_server)
 {
     FAIL();
 }
