@@ -22,7 +22,27 @@ TEST(creation, valid)
 
 TEST(connection, not_ready_server)
 {
-    FAIL();
+    unique_ptr<AudioStream> stream = nullptr;
+
+    ASSERT_NO_THROW(
+        stream = make_unique<AudioStream>(1024);
+    );
+
+    ASSERT_NE(stream, nullptr);
+    
+    try {
+        const auto isConnected = stream.connect(Endpoint("255.255.255.255", 9999), 100);
+        ASSERT_FALSE(isConnected);
+
+        const auto isDisconnected = stream.disconnect();
+        ASSERT_FALSE(isDisconnected);
+    } catch (const exception& e) {
+        cout << e.what() << endl;
+        FAIL();
+    } catch (...) {
+        cout << "Unknown exception" << endl;
+        FAIL();
+    }
 }
 
 TEST(connection, ready_server)
