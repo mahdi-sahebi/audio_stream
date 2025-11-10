@@ -9,6 +9,7 @@ set(HEADERS "")
 
 
 # Find Packages
+find_package(GTest REQUIRED)
 
 
 # Sub Directories
@@ -22,5 +23,7 @@ add_executable(${TEST} ${SOURCES} ${HEADERS})
 
 
 # Libraries
-
+target_link_libraries(${TEST}
+    PRIVATE GTest::gtest
+)
 
