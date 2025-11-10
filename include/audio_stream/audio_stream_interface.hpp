@@ -10,20 +10,20 @@
 #include <stdexcept>
 
 
-namespace AudioStream
+namespace audio_stream
 {
     using Data = std::span<char>;
 
-    typedef struct 
+    struct Endpoint 
     {
-        Endpoint(const std::string& address_str, uint16_t port_number) :
-            address(address_str), port(port_number){}
+        Endpoint(const std::string& addressStr, uint16_t portNumber) :
+            address(addressStr), port(portNumber){}
 
         std::string address;
         uint16_t    port;
-    }Endpoint;
+    };
 
-    class ClientBase
+    class BaseClient
     {
     public:
         virtual bool connect(Endpoint endpoint, uint32_t timeout_ms = 3000) = 0;
@@ -61,6 +61,6 @@ namespace AudioStream
         public:
             explicit InvalidArgument(const std::string& message) :
                 std::invalid_argument(message){}
-        }
+        };
     };
 }
