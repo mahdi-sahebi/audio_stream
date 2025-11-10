@@ -7,6 +7,8 @@
 #include <chrono>
 #include <fstream>
 #include <filesystem>
+#include <random>
+#include <ctime>
 #include <sys/wait.h>
 #include <gtest/gtest.h>
 
@@ -38,6 +40,18 @@ static bool verifyFile(const string& filePath, const vector<char>& data)
     return (0 == memcmp(temp.data(), data.data(), data.size()));
 }
 
+static vector<char> generateData(uint32_t size) {
+    vector<char> data(size, 0);
+
+    std::mt19937 range(static_cast<unsigned int>(std::time(nullptr)));
+    std::uniform_int_distribution<int> dist(32, 126);
+
+    for (uint32_t index = 0; index < size; index++) {
+        data.push_back(static_cast<char>(dist(range)));
+    }
+
+    return data;
+}
 
 TEST(creation, invalid)
 {
@@ -176,7 +190,55 @@ TEST(send_buffer, small)
 
 TEST(send_buffer, large)
 {
-    FAIL();
+    // TODO(MN): Fixture class
+    const auto receivedFilePath = "received_data.bin";
+    filesystem::remove(receivedFilePath);
+    ASSERT_TRUE(filesystem::exists("server.js"));
+    atomic<pid_t> serverPID{0};
+    vector<char> sendingData = generateData(256 * 1024);
+
+
+    future<bool> serverTask = async(launch::async, [&]() {
+        const auto pid = fork();
+        if (0 == pid) {
+            cout << "Process creation failed" << endl;
+            return false;
+        }
+
+        serverPID = pid;
+        waitpid(serverPID, nullptr, 0);
+        return true;
+    });
+
+
+    ASSERT_NO_THROW(
+        /* Let the server to be executed */
+        sleep_for(500ms);
+
+        auto stream = unique_ptr<AudioStream>(1024);
+        
+        const auto isConnected = stream->connect(Endpoint("127.0.0.0", 8080));
+        EXPECT_TRUE(isConnected);
+
+
+        const string message = "$ test & example @ text ^"; 
+        const Data data = message;
+        const auto sentSize = stream->send(data);
+        EXPECTED_EQ(sentSize, message.size());
+
+        const auto isDisconnected = stream->disconnect();
+        EXPECTED_TRUE(isDisconnected);
+
+        /* Stop the server */
+        if (serverPID > 0) {
+            kill(serverPID, SIGKILL);
+            serverPID = 0;
+        }
+        const auto serverResult = serverTask.get();
+        ASSERT_EQ(serverResult, 0);
+
+        ASSERT_TRUE(verifyFile(receivedFilePath, sendingData));
+    );
 }
 
 TEST(send_buffer, large_interrupted_communication)
