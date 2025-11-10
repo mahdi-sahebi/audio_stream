@@ -371,7 +371,60 @@ TEST(send_audio, small)
 
 TEST(send_audio, small_high_load)
 {
-    FAIL();
+    // TODO(MN): Fixture class
+    const auto receivedFilePath = "received_data.bin";
+    filesystem::remove(receivedFilePath);
+    ASSERT_TRUE(filesystem::exists("server.js"));
+    atomic<pid_t> serverPID{0};
+    vector<char> sampleData = readFile("glass.wav");
+    vector<char> sendingData;
+
+
+    future<bool> serverTask = async(launch::async, [&]() {
+        const auto pid = fork();
+        if (0 == pid) {
+            cout << "Process creation failed" << endl;
+            return false;
+        }
+
+        serverPID = pid;
+        waitpid(serverPID, nullptr, 0);
+        return true;
+    });
+
+
+    ASSERT_NO_THROW(
+        /* Let the server to be executed */
+        sleep_for(500ms);
+
+        auto stream = unique_ptr<AudioStream>(4 * 1024 * 1024);
+        
+        const auto isConnected = stream->connect(Endpoint("127.0.0.0", 8080));
+        EXPECT_TRUE(isConnected);
+
+
+        for (uint32_t index = 0; index < 1024; index++) {
+            const Data data = sampleData;
+            const auto sentSize = stream->send(data);
+            EXPECTED_EQ(sentSize, sampleData.size());
+
+            sendingData.append(sampleData);
+            sleep_for(100ms);
+        }
+
+        const auto isDisconnected = stream->disconnect();
+        EXPECTED_TRUE(isDisconnected);
+
+        /* Stop the server */
+        if (serverPID > 0) {
+            kill(serverPID, SIGKILL);
+            serverPID = 0;
+        }   
+        const auto serverResult = serverTask.get();
+        ASSERT_EQ(serverResult, 0);
+
+        ASSERT_TRUE(verifyFile(receivedFilePath, sendingData));
+    );
 }
 
 int main()
