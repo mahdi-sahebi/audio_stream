@@ -1,14 +1,14 @@
 #include "audio_stream/audio_stream.hpp"
 
 
-namespace AudioStream
+namespace audio_stream
 {
-    Client::Client(uint32_t pool_size = 2 * 1024)
+    Client::Client(uint32_t poolSize)
     {
 
     }
     
-    void Client::connect(uint32_t timeout_ms = 3000)
+    bool Client::connect(Endpoint endpoint, uint32_t timeoutMS)
     {
 
     }
@@ -20,7 +20,7 @@ namespace AudioStream
     
     bool Client::isConnected()
     {
-
+        return false;
     }
     
     uint32_t Client::send(const Data& data)

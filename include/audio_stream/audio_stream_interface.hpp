@@ -16,6 +16,7 @@ namespace audio_stream
 
     struct Endpoint 
     {
+        Endpoint() : Endpoint("", 0){}
         Endpoint(const std::string& addressStr, uint16_t portNumber) :
             address(addressStr), port(portNumber){}
 
@@ -26,7 +27,7 @@ namespace audio_stream
     class BaseClient
     {
     public:
-        virtual bool connect(Endpoint endpoint, uint32_t timeout_ms = 3000) = 0;
+        virtual bool connect(Endpoint endpoint, uint32_t timeoutMS = 3000) = 0;
         virtual void disconnect() = 0;
         virtual bool isConnected() = 0;
         virtual uint32_t send(const Data& data) = 0;

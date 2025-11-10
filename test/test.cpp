@@ -11,6 +11,7 @@
 #include <ctime>
 #include <sys/wait.h>
 #include <gtest/gtest.h>
+#include "audio_stream/audio_stream.hpp"
 
 
 using namespace std;
@@ -19,25 +20,24 @@ using namespace std::chrono_literals;
 using namespace std::this_thread;
 
 
-class ClientTest : public testing::Test
+class ClientTest : public ::testing::Test
 {
 protected:
-    AudioStream::Endpoint serverEndpoint_;
-    AudioStream stream_;
+    audio_stream::Endpoint serverEndpoint_;
+    unique_ptr<audio_stream::Client> stream_;
     string receivedFilePath_;
-    stomic<pid_t> serverPID_;
+    atomic<pid_t> serverPID_;
     future<bool> serverTask_;
 
     void SetUp() override
     {
-        serverEndpoint_ = Endpoint("127.0.0.0", 8080);
+        serverEndpoint_ = audio_stream::Endpoint("127.0.0.1", 8080);
 
         receivedFilePath_ = "received_data.bin";
         filesystem::remove(receivedFilePath_);
         
-        stream_ = unique_ptr<AudioStream>(4 * 1024 * 1024);
+        stream_ = make_unique<audio_stream::Client>(4 * 1024 * 1024);
         if (nullptr == stream_) {
-            FAIL();
             GTEST_SKIP();
         }
 
@@ -93,7 +93,7 @@ protected:
             return false;
         }
         
-        const auto fileSize = filesystem::size(filePath);
+        const auto fileSize = filesystem::file_size(filePath);
         if (fileSize != data.size()) {
             return false;
         }
@@ -145,25 +145,25 @@ protected:
 TEST(creation, invalid)
 {
     ASSERT_THROW(
-        auto stream = make_unique<AudioStream>(0);
-    , AudioStream::Exception::BadAlloc);
+        auto stream = make_unique<audio_stream::Client>(0);
+    , audio_stream::Exception::BadAlloc);
 }
 
 TEST(creation, valid)
 {
     ASSERT_NO_THROW(
-        auto stream = make_unique<AudioStream>(1024);
+        auto stream = make_unique<audio_stream::Client>(1024);
     );
 }
 
 TEST_F(ClientTest, connect_to_not_ready_server)
 {    
     try {
-        const auto isConnected = stream_->connect(Endpoint("255.255.255.255", 9999), 100);
+        const auto isConnected = stream_->connect(audio_stream::Endpoint("255.255.255.255", 9999), 100);
         ASSERT_FALSE(isConnected);
 
-        const auto isDisconnected = stream_->disconnect();
-        ASSERT_FALSE(isDisconnected);
+        stream_->disconnect();
+        ASSERT_FALSE(stream_->isConnected());
     } catch (const exception& e) {
         cout << e.what() << endl;
         FAIL();
@@ -178,29 +178,31 @@ TEST_F(ClientTest, connect_to_ready_server)
     ASSERT_NO_THROW(
         const auto isConnected = stream_->connect(serverEndpoint_);
         EXPECT_TRUE(isConnected);
+        EXPECT_TRUE(stream_->isConnected());
 
-        const auto isDisconnected = stream_->disconnect();
-        EXPECTED_TRUE(isDisconnected);
+        stream_->disconnect();
+        EXPECT_TRUE(stream_->isConnected());
     );
 }
 
 TEST_F(ClientTest, send_small_buffer)
 {
     ASSERT_TRUE(filesystem::exists("server.js"));
-    vector<char> sendingData = "_+ exampLe #$ tESt )(";
+    const string stringData = "_+ exampLe #$ tESt )(";
+    vector<char> sendingData(stringData.begin(), stringData.end());
 
     ASSERT_NO_THROW(
         const auto isConnected = stream_->connect(serverEndpoint_);
         EXPECT_TRUE(isConnected);
 
 
-        const string message = "$ test & example @ text ^"; 
-        const Data data = message;
+        string message = "$ test & example @ text ^"; 
+        const audio_stream::Data data(message.data(), message.size());
         const auto sentSize = stream_->send(data);
-        EXPECTED_EQ(sentSize, message.size());
+        EXPECT_EQ(sentSize, static_cast<uint32_t>(message.size()));
 
-        const auto isDisconnected = stream_->disconnect();
-        EXPECTED_TRUE(isDisconnected);
+        stream_->disconnect();
+        EXPECT_FALSE(stream_->isConnected());
     );
 }
 
@@ -214,12 +216,12 @@ TEST_F(ClientTest, send_large_buffer)
         EXPECT_TRUE(isConnected);
 
 
-        const Data data = sendingData;
+        const audio_stream::Data data = sendingData;
         const auto sentSize = stream_->send(data);
-        EXPECTED_EQ(sentSize, sendingData.size());
+        EXPECT_EQ(sentSize, static_cast<uint32_t>(sendingData.size()));
 
-        const auto isDisconnected = stream_->disconnect();
-        EXPECTED_TRUE(isDisconnected);
+        stream_->disconnect();
+        EXPECT_FALSE(stream_->isConnected());
     );
 }
 
@@ -235,16 +237,16 @@ TEST_F(ClientTest, send_larg_buffer_interrupted)
 
 
         for (uint32_t index = 0; index < 128; index++) {
-            const Data data = sampleData;
+            const audio_stream::Data data = sampleData;
             const auto sentSize = stream_->send(data);
-            EXPECTED_EQ(sentSize, sampleData.size());
+            EXPECT_EQ(sentSize, sampleData.size());
 
-            sendingData.append(sampleData);
+            sendingData.insert(sendingData.end(), sampleData.begin(), sampleData.end());
             sleep_for(100ms);
         }
 
-        const auto isDisconnected = stream_->disconnect();
-        EXPECTED_TRUE(isDisconnected);
+        stream_->disconnect();
+        EXPECT_FALSE(stream_->isConnected());
     );
 }
 
@@ -257,12 +259,12 @@ TEST_F(ClientTest, send_small_audio)
         const auto isConnected = stream_->connect(serverEndpoint_);
         EXPECT_TRUE(isConnected);
 
-        const Data data = sendingData;
+        const audio_stream::Data data = sendingData;
         const auto sentSize = stream_->send(data);
-        EXPECTED_EQ(sentSize, sendingData.size());
+        EXPECT_EQ(sentSize, sendingData.size());
 
-        const auto isDisconnected = stream_->disconnect();
-        EXPECTED_TRUE(isDisconnected);
+        stream_->disconnect();
+        EXPECT_FALSE(stream_->isConnected());
     );
 }
 
@@ -277,16 +279,16 @@ TEST_F(ClientTest, send_several_audios)
         EXPECT_TRUE(isConnected);
 
         for (uint32_t index = 0; index < 1024; index++) {
-            const Data data = sampleData;
+            const audio_stream::Data data = sampleData;
             const auto sentSize = stream_->send(data);
-            EXPECTED_EQ(sentSize, sampleData.size());
+            EXPECT_EQ(sentSize, sampleData.size());
 
-            sendingData.append(sampleData);
+            sendingData.insert(sendingData.begin(), sampleData.begin(), sampleData.end());
             sleep_for(100ms);
         }
 
-        const auto isDisconnected = stream_->disconnect();
-        EXPECTED_TRUE(isDisconnected);
+        stream_->disconnect();
+        EXPECT_FALSE(stream_->isConnected());
     );
 }
 

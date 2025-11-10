@@ -24,6 +24,6 @@ add_executable(${TEST} ${SOURCES} ${HEADERS})
 
 # Libraries
 target_link_libraries(${TEST}
-    PRIVATE GTest::gtest
+    PRIVATE GTest::gtest stdc++fs audio_stream
 )
 

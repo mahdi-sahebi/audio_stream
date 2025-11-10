@@ -3,15 +3,15 @@
 #include "audio_stream_interface.hpp"
 
 
-namespace AudioStream
+namespace audio_stream
 {
-    class Client : public AudioStream::ClientBase
+    class Client : public audio_stream::BaseClient
     {
     public:
-        Client(uint32_t pool_size = 2 * 1024);
+        explicit Client(uint32_t poolSize = 2 * 1024);
         virtual ~Client() = default;
 
-        bool connect(Endpoint endpoint, uint32_t timeout_ms = 3000) override;
+        bool connect(Endpoint endpoint, uint32_t timeoutMS = 3000) override;
         void disconnect() override;
         bool isConnected() override;
         uint32_t send(const Data& data) override;
