@@ -31,7 +31,8 @@ namespace audio_stream
     
     bool Client::connect(Endpoint endpoint, uint32_t timeoutMS)
     {
-        // TODO(MN): Thread-safe. double connect
+        // TODO(MN): double connect
+        unique_lock<mutex> lock(apiMutex_);
 
         // TODO(MN): Reset connection flags
         setConnectionStatus(false);
@@ -77,8 +78,8 @@ namespace audio_stream
             }
         });
 
-        unique_lock<mutex> lock(connectionMutex_);
-        connectionCV_.wait_for(lock, milliseconds(timeoutMS), [&]() {
+        unique_lock<mutex> connectionLock(connectionMutex_);
+        connectionCV_.wait_for(connectionLock, milliseconds(timeoutMS), [&]() {
             return isConnected_;
         });
 

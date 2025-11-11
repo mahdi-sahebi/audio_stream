@@ -22,12 +22,13 @@ namespace audio_stream
     protected:
 
     private:
+        std::mutex apiMutex_;
         std::mutex connectionMutex_;
         std::condition_variable connectionCV_;
         bool isConnected_;
 
         void setConnectionStatus(bool enable);
-        static int websocketEvent(
+        static int websocketEvent(// TODO(MN): Encapsulate
             struct lws* wsi, 
             enum lws_callback_reasons reason,
             void* userData, 
