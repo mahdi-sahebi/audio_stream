@@ -5,12 +5,14 @@ namespace audio_stream
 {
     Client::Client(uint32_t poolSize)
     {
-
+        if (0 == poolSize) {
+            throw audio_stream::Exception::BadAlloc("Zero pool size");
+        }
     }
     
     bool Client::connect(Endpoint endpoint, uint32_t timeoutMS)
     {
-
+        return false;
     }
     
     void Client::disconnect()

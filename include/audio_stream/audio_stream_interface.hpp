@@ -48,6 +48,7 @@ namespace audio_stream
         public:
             explicit BadAlloc(const std::string& message) :
                 message_(message){}
+            virtual ~BadAlloc() noexcept override = default;
             const char* what() const noexcept override
             {
                 return message_.c_str();
