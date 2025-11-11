@@ -87,7 +87,7 @@ protected:
             kill(serverPID_, SIGKILL);
             serverPID_ = 0;
         }
-
+        // TODO(MN): search in processes to ensure no server ndoejs is run
         const auto serverResult = serverTask_.get();
         ASSERT_TRUE(serverResult);
     }
@@ -171,11 +171,11 @@ TEST_F(ClientTest, connect_to_not_ready_server)
         ASSERT_FALSE(stream_->isConnected());
     );
 }
-/*
+
 TEST_F(ClientTest, connect_to_ready_server)
 {
     ASSERT_NO_THROW(
-        const auto isConnected = stream_->connect(serverEndpoint_);
+        const auto isConnected = stream_->connect(serverEndpoint_, 3000);
         EXPECT_TRUE(isConnected);
         EXPECT_TRUE(stream_->isConnected());
 
@@ -183,7 +183,7 @@ TEST_F(ClientTest, connect_to_ready_server)
         EXPECT_TRUE(stream_->isConnected());
     );
 }
-
+/*
 TEST_F(ClientTest, send_small_buffer)
 {
     ASSERT_TRUE(filesystem::exists("server.js"));

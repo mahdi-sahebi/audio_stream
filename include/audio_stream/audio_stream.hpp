@@ -1,5 +1,8 @@
 #pragma once
 
+#include <condition_variable>
+#include <mutex>
+#include "libwebsockets.h"// TODO(MN): Encapsulate
 #include "audio_stream_interface.hpp"
 
 
@@ -19,6 +22,16 @@ namespace audio_stream
     protected:
 
     private:
+        std::mutex connectionMutex_;
+        std::condition_variable connectionCV_;
+        bool isConnected_;
 
+        void setConnectionStatus(bool enable);
+        static int websocketEvent(
+            struct lws* wsi, 
+            enum lws_callback_reasons reason,
+            void* userData, 
+            void* in, 
+            size_t len);
     };
 }
