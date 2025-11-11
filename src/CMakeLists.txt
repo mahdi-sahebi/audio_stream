@@ -28,5 +28,8 @@ target_include_directories(${LIB}
 
 
 # Libraries
+target_link_libraries(${LIB}
+    PRIVATE websockets
+)
 
 
