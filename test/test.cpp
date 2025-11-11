@@ -56,9 +56,13 @@ protected:
 
         serverTask_ = async(launch::async, [&]() {
             const auto pid = fork();
-            if (0 == pid) {
+            cout << "PID: " << pid;
+            if (pid < 0) {
                 cout << "Process creation failed" << endl;
                 return false;
+            } else if (0 == pid) {
+                execlp("node", "node", "deps/server.js", nullptr);
+                exit(1);
             }
     
             serverPID_ = pid;
