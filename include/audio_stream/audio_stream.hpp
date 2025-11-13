@@ -26,6 +26,7 @@ namespace audio_stream
         std::mutex connectionMutex_;
         std::condition_variable connectionCV_;
         bool isConnected_;
+        lws* websocket_;// TODO(MN): Encapsulate. smart pointer
 
         void setConnectionStatus(bool enable);
         static int websocketEvent(// TODO(MN): Encapsulate

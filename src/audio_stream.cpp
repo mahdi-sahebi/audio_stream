@@ -22,7 +22,7 @@ namespace audio_stream
 {
     
     Client::Client(uint32_t poolSize) :
-        isConnected_{false}
+        isConnected_{false}, websocket_{nullptr}
     {
         if (0 == poolSize) {
             throw audio_stream::Exception::BadAlloc("Zero pool size");
@@ -63,13 +63,13 @@ namespace audio_stream
         conn_info.protocol       = protocols[0].name;
         conn_info.ssl_connection = 0;
     
-        auto wsi = lws_client_connect_via_info(&conn_info);
-        if (nullptr == wsi) {
+        websocket_ = lws_client_connect_via_info(&conn_info);
+        if (nullptr == websocket_) {
             lws_context_destroy(context);
             return false;
         }
 
-        auto clientData = static_cast<ClientData*>(lws_wsi_user(wsi));
+        auto clientData = static_cast<ClientData*>(lws_wsi_user(websocket_));
         clientData->client = this;
 
         future<void> serviceThread = async(launch::async, [&]() {
@@ -82,6 +82,7 @@ namespace audio_stream
         connectionCV_.wait_for(connectionLock, milliseconds(timeoutMS), [&]() {
             return isConnected_;
         });
+        connectionLock.unlock();
 
         // TODO(MN): What about timedout and service thread is run?
         serviceThread.get();
