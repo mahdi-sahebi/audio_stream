@@ -80,21 +80,13 @@ namespace audio_stream
             while (isRun()) {
                 lws_service(context_, 100);
 
-                // cout << "Con: " << isConnected() << endl;
-                // while (isConnected()) {
-                //     lws_service(context_, 1000);// TODO(MN): Decrease and check for pending  sending data from this thread
-
-                //     if (!isConnected()) {// TODO(MN): Extra?
-                //         continue;
-                //     }
-
-                //     cout << "[RCV]: " << getBufferSize() << endl;
-                //     if (getBufferSize()) {
-                //         auto data = readBuffer();
-                //         sendBuffer(data);
-                //     }
-                // }
-            // }
+                if (isConnected()) {
+                    if (getBufferSize()) {
+                        cout << "[SND]: " << getBufferSize() << endl;
+                        auto data = readBuffer();
+                        sendBuffer(data);
+                    }
+                }
             }
 
             lws_cancel_service(context_);
