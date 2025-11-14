@@ -71,7 +71,7 @@ namespace audio_stream
             if (nullptr == websocket_) {
                 lws_context_destroy(context_);
                 // TODO(MN): Stop immediately
-                // return false;
+                return;// false;
             }
     
             auto clientData = static_cast<ClientData*>(lws_wsi_user(websocket_));
