@@ -157,7 +157,6 @@ protected:
     }
 };
 
-
 TEST(creation, invalid)
 {
     ASSERT_THROW(
@@ -194,7 +193,6 @@ TEST_F(ClientTest, connect_to_ready_server)
         EXPECT_TRUE(stream_->isConnected());
     );
 }
-*/
 
 TEST_F(ClientTest, send_small_buffer)
 {
@@ -216,7 +214,7 @@ TEST_F(ClientTest, send_small_buffer)
     );
     cout << "End of test" << endl;
 }
-/*
+
 TEST_F(ClientTest, send_large_buffer)
 {
     ASSERT_TRUE(filesystem::exists("server.js"));
@@ -301,7 +299,7 @@ TEST_F(ClientTest, send_several_audios)
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
     );
-}*/
+}
 
 int main()
 {
