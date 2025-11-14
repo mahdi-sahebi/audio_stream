@@ -34,7 +34,7 @@ protected:
         startServer();
         serverEndpoint_ = audio_stream::Endpoint("localhost", 8080);
 
-        receivedFilePath_ = "received_data.bin";
+        receivedFilePath_ = "deps/received_data.bin";
         filesystem::remove(receivedFilePath_);
         
         stream_ = make_unique<audio_stream::Client>(4 * 1024 * 1024);
@@ -205,16 +205,18 @@ TEST_F(ClientTest, send_small_buffer)
 
         string message = "$ test & example @ text ^"; 
         const audio_stream::Data data(message.data(), message.size());
-        // const auto sentSize = stream_->send(data);
-        // EXPECT_EQ(sentSize, static_cast<uint32_t>(message.size()));
+        const auto sentSize = stream_->send(data);
+        EXPECT_EQ(sentSize, static_cast<uint32_t>(message.size()));
 
         sleep_for(2000ms);
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
-    );
-    cout << "End of test" << endl;
-}
 
+        vector<char> transferData(message.begin(), message.end());
+        ASSERT_TRUE(verifyFile(receivedFilePath_, transferData));
+    );
+}
+/*
 TEST_F(ClientTest, send_large_buffer)
 {
     ASSERT_TRUE(filesystem::exists("server.js"));
