@@ -190,7 +190,7 @@ TEST_F(ClientTest, connect_to_ready_server)
         EXPECT_TRUE(stream_->isConnected());
 
         stream_->disconnect();
-        EXPECT_TRUE(stream_->isConnected());
+        EXPECT_FALSE(stream_->isConnected());
     );
 }
 
