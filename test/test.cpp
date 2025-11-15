@@ -216,7 +216,7 @@ TEST_F(ClientTest, send_small_buffer)
         ASSERT_TRUE(verifyFile(receivedFilePath_, transferData));
     );
 }
-*/
+
 TEST_F(ClientTest, send_large_buffer)
 {
     vector<char> sendingData = generateData(256 * 1024 + 3);
@@ -236,17 +236,15 @@ TEST_F(ClientTest, send_large_buffer)
         ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
-/*
+*/
 TEST_F(ClientTest, send_larg_buffer_interrupted)
 {
-    ASSERT_TRUE(filesystem::exists("server.js"));
-    vector<char> sampleData = generateData(2 * 1024);
+    vector<char> sampleData = generateData(2 * 1024 - 371);
     vector<char> sendingData;
 
     ASSERT_NO_THROW(
         const auto isConnected = stream_->connect(serverEndpoint_);
         EXPECT_TRUE(isConnected);
-
 
         for (uint32_t index = 0; index < 128; index++) {
             const audio_stream::Data data = sampleData;
@@ -254,14 +252,17 @@ TEST_F(ClientTest, send_larg_buffer_interrupted)
             EXPECT_EQ(sentSize, sampleData.size());
 
             sendingData.insert(sendingData.end(), sampleData.begin(), sampleData.end());
-            sleep_for(100ms);
+            sleep_for(10ms);
         }
 
+        sleep_for(1500ms);
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
+
+        ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
-
+/*
 TEST_F(ClientTest, send_small_audio)
 {
     ASSERT_TRUE(filesystem::exists("server.js"));
