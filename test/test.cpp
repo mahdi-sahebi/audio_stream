@@ -106,11 +106,13 @@ protected:
     bool verifyFile(const string& filePath, const vector<char>& data)
     {
         if (!filesystem::exists(filePath)) {
+            cout << "File not exists" << endl;
             return false;
         }
         
         const auto fileSize = filesystem::file_size(filePath);
         if (fileSize != data.size()) {
+            cout << "File size failed. " << data.size() << " != " << fileSize << endl; 
             return false;
         }
     
@@ -255,10 +257,10 @@ TEST_F(ClientTest, send_larg_buffer_interrupted)
             sleep_for(10ms);
         }
 
-        sleep_for(1500ms);
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
 
+        sleep_for(1000ms);
         ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
