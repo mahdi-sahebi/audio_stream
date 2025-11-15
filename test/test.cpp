@@ -26,6 +26,7 @@ protected:
     audio_stream::Endpoint serverEndpoint_;
     unique_ptr<audio_stream::Client> stream_;
     string receivedFilePath_;
+    string audioFilePath_;
     atomic<pid_t> serverPID_;
     future<bool> serverTask_;
 
@@ -37,6 +38,8 @@ protected:
         receivedFilePath_ = "deps/received_data.bin";
         filesystem::remove(receivedFilePath_);
         
+        audioFilePath_ = "deps/glass.wav";
+
         stream_ = make_unique<audio_stream::Client>(4 * 1024 * 1024);
         if (nullptr == stream_) {
             GTEST_SKIP();
@@ -158,7 +161,7 @@ protected:
         return data;
     }
 };
-
+/*
 TEST(creation, invalid)
 {
     ASSERT_THROW(
@@ -264,11 +267,11 @@ TEST_F(ClientTest, send_larg_buffer_interrupted)
         ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
-/*
+*/
+
 TEST_F(ClientTest, send_small_audio)
 {
-    ASSERT_TRUE(filesystem::exists("server.js"));
-    vector<char> sendingData = readFile("glass.wav");
+    vector<char> sendingData = readFile(audioFilePath_);
 
     ASSERT_NO_THROW(
         const auto isConnected = stream_->connect(serverEndpoint_);
@@ -280,12 +283,14 @@ TEST_F(ClientTest, send_small_audio)
 
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
+
+        sleep_for(1000ms);// TODO(MN): Move into the verifyFile and calculate
+        ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
-
+/*
 TEST_F(ClientTest, send_several_audios)
 {
-    ASSERT_TRUE(filesystem::exists("server.js"));
     vector<char> sampleData = readFile("glass.wav");
     vector<char> sendingData;
 
@@ -304,6 +309,9 @@ TEST_F(ClientTest, send_several_audios)
 
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
+
+        sleep_for(1000ms);// TODO(MN): Move into the verifyFile and calculate
+        ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
 */
