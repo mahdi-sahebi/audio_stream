@@ -158,7 +158,7 @@ protected:
         return data;
     }
 };
-/*
+
 TEST(creation, invalid)
 {
     ASSERT_THROW(
@@ -231,14 +231,14 @@ TEST_F(ClientTest, send_large_buffer)
         const auto sentSize = stream_->send(data);
         EXPECT_EQ(sentSize, static_cast<uint32_t>(sendingData.size()));
 
-        sleep_for(1200ms);
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
 
+        sleep_for(1200ms);
         ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
-*/
+
 TEST_F(ClientTest, send_larg_buffer_interrupted)
 {
     vector<char> sampleData = generateData(2 * 1024 - 371);
