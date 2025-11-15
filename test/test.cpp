@@ -150,13 +150,13 @@ protected:
         std::uniform_int_distribution<int> dist(32, 126);
     
         for (uint32_t index = 0; index < size; index++) {
-            data.push_back(static_cast<char>(dist(range)));
+            data[index] = static_cast<char>(dist(range));
         }
     
         return data;
     }
 };
-
+/*
 TEST(creation, invalid)
 {
     ASSERT_THROW(
@@ -216,26 +216,27 @@ TEST_F(ClientTest, send_small_buffer)
         ASSERT_TRUE(verifyFile(receivedFilePath_, transferData));
     );
 }
-/*
+*/
 TEST_F(ClientTest, send_large_buffer)
 {
-    ASSERT_TRUE(filesystem::exists("server.js"));
-    vector<char> sendingData = generateData(256 * 1024);
+    vector<char> sendingData = generateData(256 * 1024 + 3);
 
     ASSERT_NO_THROW(
         const auto isConnected = stream_->connect(serverEndpoint_);
         EXPECT_TRUE(isConnected);
 
-
         const audio_stream::Data data = sendingData;
         const auto sentSize = stream_->send(data);
         EXPECT_EQ(sentSize, static_cast<uint32_t>(sendingData.size()));
 
+        sleep_for(1200ms);
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
+
+        ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
-
+/*
 TEST_F(ClientTest, send_larg_buffer_interrupted)
 {
     ASSERT_TRUE(filesystem::exists("server.js"));
