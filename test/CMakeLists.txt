@@ -24,6 +24,11 @@ add_executable(${TEST} ${SOURCES} ${HEADERS})
 
 # Libraries
 target_link_libraries(${TEST}
-    PRIVATE GTest::gtest
+    PRIVATE GTest::gtest stdc++fs audio_stream
 )
 
+
+# Dependencies
+file(COPY 
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps
+    DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

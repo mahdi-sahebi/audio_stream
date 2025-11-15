@@ -1,21 +1,38 @@
 const http = require('http');
 const fs = require('fs');
 const WebSocket = require('ws');
+const path = require('path');
 
-// Create HTTP server
 const server = http.createServer();
+const wss = new WebSocket.Server({ server, perMessageDeflate: false });
 
-// Create WebSocket server on top of HTTP
-const wss = new WebSocket.Server({ server });
+const filePath = path.join(__dirname, 'received_data.bin');
 
-wss.on('connection', ws => {
-  ws.on('message', message => {
-    fs.appendFile('received.txt', message + '\n', err => {
-      if (err) console.error('Error writing to file:', err);
+fs.closeSync(fs.openSync(filePath, 'w'));
+
+let totalBytes = 0;
+
+wss.on('connection', (ws) => {
+    console.log('[SERVER]: Client connected');
+    
+    ws.on('message', (message, isBinary) => {
+        if (isBinary) {
+            totalBytes += message.length;
+
+            const fd = fs.openSync(filePath, 'a');
+            fs.writeSync(fd, message);
+            fs.fsyncSync(fd);
+            fs.closeSync(fd);
+
+            console.log(`[RCV]: ${message.length}`);
+        }
     });
-  });
+    
+    ws.on('close', () => {
+        console.log(`[SERVER]: Client disconnected. Total bytes: ${totalBytes}`);
+    });
 });
 
 server.listen(8080, () => {
-  console.log('WebSocket server running at http://localhost:8080');
+    console.log('[SERVER]: Listening on port 8080');
 });
