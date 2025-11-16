@@ -297,32 +297,31 @@ TEST_F(ClientTest, send_small_audio)
     );
 }
 
+TEST_F(ClientTest, send_several_audios)
+{
+    vector<char> sampleData = readFile(audioFilePath_);
+    vector<char> sendingData;
 
-// TEST_F(ClientTest, send_several_audios)
-// {
-//     vector<char> sampleData = readFile(audioFilePath_);
-//     vector<char> sendingData;
+    ASSERT_NO_THROW(
+        const auto isConnected = stream_->connect(serverEndpoint_);
+        EXPECT_TRUE(isConnected);
 
-//     // ASSERT_NO_THROW(
-//         const auto isConnected = stream_->connect(serverEndpoint_);
-//         EXPECT_TRUE(isConnected);
+        for (uint32_t index = 0; index < 1; index++) {
+            const audio_stream::Data data = sampleData;
+            const auto sentSize = stream_->send(data);
+            EXPECT_EQ(sentSize, sampleData.size());
 
-//         for (uint32_t index = 0; index < 1; index++) {
-//             const audio_stream::Data data = sampleData;
-//             const auto sentSize = stream_->send(data);
-//             EXPECT_EQ(sentSize, sampleData.size());
+            sendingData.insert(sendingData.begin(), sampleData.begin(), sampleData.end());
+            sleep_for(10ms);
+        }
 
-//             sendingData.insert(sendingData.begin(), sampleData.begin(), sampleData.end());
-//             sleep_for(10ms);
-//         }
+        sleep_for(1s);
+        stream_->disconnect();
+        EXPECT_FALSE(stream_->isConnected());
 
-//         stream_->disconnect();
-//         EXPECT_FALSE(stream_->isConnected());
-
-//         sleep_for(10000ms);// TODO(MN): Move into the verifyFile and calculate
-//         ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
-//     // );
-// }
+        ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
+    );
+}
 
 int main()
 {
