@@ -183,28 +183,36 @@ TEST(creation, valid)
 
 TEST_F(ClientTest, connect_to_not_ready_server)
 {    
-    EXPECT_NO_THROW(
-        const auto isConnected = stream_->connect(audio_stream::Endpoint("255.255.255.255", 9999), 100);
-        ASSERT_FALSE(isConnected);
-    );
+    constexpr auto TEST_COUNT = 20;
 
-    EXPECT_THROW(
-        stream_->disconnect();
-    , audio_stream::Exception::Connection);
+    for (uint32_t testIndex = 0; testIndex < TEST_COUNT; testIndex++) {
+        EXPECT_NO_THROW(
+            const auto isConnected = stream_->connect(audio_stream::Endpoint("255.255.255.255", 9999), 100);
+            ASSERT_FALSE(isConnected);
+        );
 
-    ASSERT_FALSE(stream_->isConnected());
+        EXPECT_THROW(
+            stream_->disconnect();
+        , audio_stream::Exception::Connection);
+
+        ASSERT_FALSE(stream_->isConnected());
+    }
 }
 
 TEST_F(ClientTest, connect_to_ready_server)
 {
-    ASSERT_NO_THROW(
-        const auto isConnected = stream_->connect(serverEndpoint_, 3000);
-        EXPECT_TRUE(isConnected);
-        EXPECT_TRUE(stream_->isConnected());
+    constexpr auto TEST_COUNT = 20;
 
-        stream_->disconnect();
-        EXPECT_FALSE(stream_->isConnected());
-    );
+    for (uint32_t testIndex = 0; testIndex < TEST_COUNT; testIndex++) {
+        ASSERT_NO_THROW(
+            const auto isConnected = stream_->connect(serverEndpoint_, 3000);
+            EXPECT_TRUE(isConnected);
+            EXPECT_TRUE(stream_->isConnected());
+
+            stream_->disconnect();
+            EXPECT_FALSE(stream_->isConnected());
+        );
+    }
 }
 
 TEST_F(ClientTest, send_small_buffer)
