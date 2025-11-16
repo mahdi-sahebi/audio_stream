@@ -268,7 +268,6 @@ TEST_F(ClientTest, send_larg_buffer_interrupted)
     );
 }
 */
-
 TEST_F(ClientTest, send_small_audio)
 {
     vector<char> sendingData = readFile(audioFilePath_);
@@ -284,37 +283,38 @@ TEST_F(ClientTest, send_small_audio)
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
 
-        sleep_for(1000ms);// TODO(MN): Move into the verifyFile and calculate
+        // sleep_for(1000ms);// TODO(MN): Move into the verifyFile and calculate
         ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
-/*
-TEST_F(ClientTest, send_several_audios)
-{
-    vector<char> sampleData = readFile("glass.wav");
-    vector<char> sendingData;
 
-    ASSERT_NO_THROW(
-        const auto isConnected = stream_->connect(serverEndpoint_);
-        EXPECT_TRUE(isConnected);
 
-        for (uint32_t index = 0; index < 1024; index++) {
-            const audio_stream::Data data = sampleData;
-            const auto sentSize = stream_->send(data);
-            EXPECT_EQ(sentSize, sampleData.size());
+// TEST_F(ClientTest, send_several_audios)
+// {
+//     vector<char> sampleData = readFile(audioFilePath_);
+//     vector<char> sendingData;
 
-            sendingData.insert(sendingData.begin(), sampleData.begin(), sampleData.end());
-            sleep_for(100ms);
-        }
+//     // ASSERT_NO_THROW(
+//         const auto isConnected = stream_->connect(serverEndpoint_);
+//         EXPECT_TRUE(isConnected);
 
-        stream_->disconnect();
-        EXPECT_FALSE(stream_->isConnected());
+//         for (uint32_t index = 0; index < 1; index++) {
+//             const audio_stream::Data data = sampleData;
+//             const auto sentSize = stream_->send(data);
+//             EXPECT_EQ(sentSize, sampleData.size());
 
-        sleep_for(1000ms);// TODO(MN): Move into the verifyFile and calculate
-        ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
-    );
-}
-*/
+//             sendingData.insert(sendingData.begin(), sampleData.begin(), sampleData.end());
+//             sleep_for(10ms);
+//         }
+
+//         stream_->disconnect();
+//         EXPECT_FALSE(stream_->isConnected());
+
+//         sleep_for(10000ms);// TODO(MN): Move into the verifyFile and calculate
+//         ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
+//     // );
+// }
+
 int main()
 {
     testing::InitGoogleTest();

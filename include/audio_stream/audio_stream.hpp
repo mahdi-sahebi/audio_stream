@@ -28,9 +28,12 @@ namespace audio_stream
         bool isRun_;
 
         std::mutex apiMutex_;
+
         std::mutex connectionMutex_;
         std::condition_variable connectionCV_;
         bool isConnected_;
+        void setConnectionStatus(bool enable);
+        
         lws* websocket_;// TODO(MN): Encapsulate. smart pointer
         lws_context* context_;// TODO(MN): Encapsulate, smart pointer
         std::future<void> serviceThread_;
@@ -41,7 +44,10 @@ namespace audio_stream
         void setRunStatus(bool status);
         bool isRun();
 
-        void setConnectionStatus(bool enable);
+        std::mutex sendMutex_;
+        std::condition_variable sendCV_;
+        void waitForSend();
+
         void setConnectedSocket(lws* socket);
         // bool waitForConnection(uint32_t timeoutMS);
         static int websocketEvent(// TODO(MN): Encapsulate
