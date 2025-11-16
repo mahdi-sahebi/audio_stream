@@ -108,6 +108,9 @@ protected:
 
     bool verifyFile(const string& filePath, const vector<char>& data)
     {
+        /* Let the server flush the file */
+        sleep_for(20ms * data.size() / 1000);
+
         if (!filesystem::exists(filePath)) {
             cout << "File not exists" << endl;
             return false;
@@ -161,7 +164,7 @@ protected:
         return data;
     }
 };
-/*
+
 TEST(creation, invalid)
 {
     ASSERT_THROW(
@@ -213,7 +216,6 @@ TEST_F(ClientTest, send_small_buffer)
         const auto sentSize = stream_->send(data);
         EXPECT_EQ(sentSize, static_cast<uint32_t>(message.size()));
 
-        sleep_for(2000ms);
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
 
@@ -237,7 +239,6 @@ TEST_F(ClientTest, send_large_buffer)
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
 
-        sleep_for(1200ms);
         ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
@@ -263,11 +264,10 @@ TEST_F(ClientTest, send_larg_buffer_interrupted)
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
 
-        sleep_for(1000ms);
         ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
-*/
+
 TEST_F(ClientTest, send_small_audio)
 {
     vector<char> sendingData = readFile(audioFilePath_);
@@ -278,12 +278,11 @@ TEST_F(ClientTest, send_small_audio)
 
         const audio_stream::Data data = sendingData;
         const auto sentSize = stream_->send(data);
-        EXPECT_EQ(sentSize, sendingData.size());
+        EXPECT_EQ(sentSize, sendingData.size());    
 
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
 
-        // sleep_for(1000ms);// TODO(MN): Move into the verifyFile and calculate
         ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
