@@ -14,7 +14,7 @@ namespace audio_stream
     {
     public:
         explicit Client(uint32_t poolSize = 2 * 1024);
-        virtual ~Client() = default;
+        ~Client();
 
         bool connect(Endpoint endpoint, uint32_t timeoutMS = 3000) override;
         void disconnect() override;
@@ -28,9 +28,13 @@ namespace audio_stream
         bool isRun_;
 
         std::mutex apiMutex_;
+
         std::mutex connectionMutex_;
         std::condition_variable connectionCV_;
         bool isConnected_;
+        bool closeRequested_;// TODO(MN): Merge with isConnected_
+        void setConnectionStatus(bool enable);
+        
         lws* websocket_;// TODO(MN): Encapsulate. smart pointer
         lws_context* context_;// TODO(MN): Encapsulate, smart pointer
         std::future<void> serviceThread_;
@@ -41,7 +45,10 @@ namespace audio_stream
         void setRunStatus(bool status);
         bool isRun();
 
-        void setConnectionStatus(bool enable);
+        std::mutex sendMutex_;
+        std::condition_variable sendCV_;
+        void waitForSend();
+
         void setConnectedSocket(lws* socket);
         // bool waitForConnection(uint32_t timeoutMS);
         static int websocketEvent(// TODO(MN): Encapsulate

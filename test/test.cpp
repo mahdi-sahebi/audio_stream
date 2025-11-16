@@ -26,6 +26,7 @@ protected:
     audio_stream::Endpoint serverEndpoint_;
     unique_ptr<audio_stream::Client> stream_;
     string receivedFilePath_;
+    string audioFilePath_;
     atomic<pid_t> serverPID_;
     future<bool> serverTask_;
 
@@ -37,6 +38,8 @@ protected:
         receivedFilePath_ = "deps/received_data.bin";
         filesystem::remove(receivedFilePath_);
         
+        audioFilePath_ = "deps/glass.wav";
+
         stream_ = make_unique<audio_stream::Client>(4 * 1024 * 1024);
         if (nullptr == stream_) {
             GTEST_SKIP();
@@ -105,12 +108,19 @@ protected:
 
     bool verifyFile(const string& filePath, const vector<char>& data)
     {
+        /* Let the server flush the file */
+        const auto waitTimeMS = data.size() / 100;
+        cout << "Wait " << waitTimeMS << "ms for generating file..." << endl;
+        sleep_for(milliseconds(waitTimeMS));
+
         if (!filesystem::exists(filePath)) {
+            cout << "File not exists" << endl;
             return false;
         }
         
         const auto fileSize = filesystem::file_size(filePath);
         if (fileSize != data.size()) {
+            cout << "File size failed. " << data.size() << " != " << fileSize << endl; 
             return false;
         }
     
@@ -150,7 +160,7 @@ protected:
         std::uniform_int_distribution<int> dist(32, 126);
     
         for (uint32_t index = 0; index < size; index++) {
-            data.push_back(static_cast<char>(dist(range)));
+            data[index] = static_cast<char>(dist(range));
         }
     
         return data;
@@ -176,10 +186,13 @@ TEST_F(ClientTest, connect_to_not_ready_server)
     EXPECT_NO_THROW(
         const auto isConnected = stream_->connect(audio_stream::Endpoint("255.255.255.255", 9999), 100);
         ASSERT_FALSE(isConnected);
-
-        stream_->disconnect();
-        ASSERT_FALSE(stream_->isConnected());
     );
+
+    EXPECT_THROW(
+        stream_->disconnect();
+    , audio_stream::Exception::Connection);
+
+    ASSERT_FALSE(stream_->isConnected());
 }
 
 TEST_F(ClientTest, connect_to_ready_server)
@@ -202,13 +215,14 @@ TEST_F(ClientTest, send_small_buffer)
     ASSERT_NO_THROW(
         const auto isConnected = stream_->connect(serverEndpoint_, 2000);
         EXPECT_TRUE(isConnected);
+        EXPECT_TRUE(stream_->isConnected());
 
         string message = "$ test & example @ text ^"; 
         const audio_stream::Data data(message.data(), message.size());
         const auto sentSize = stream_->send(data);
         EXPECT_EQ(sentSize, static_cast<uint32_t>(message.size()));
 
-        sleep_for(2000ms);
+        sleep_for(1s);
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
 
@@ -216,55 +230,56 @@ TEST_F(ClientTest, send_small_buffer)
         ASSERT_TRUE(verifyFile(receivedFilePath_, transferData));
     );
 }
-/*
+
 TEST_F(ClientTest, send_large_buffer)
 {
-    ASSERT_TRUE(filesystem::exists("server.js"));
-    vector<char> sendingData = generateData(256 * 1024);
+    vector<char> sendingData = generateData(256 * 1024 + 3);
 
     ASSERT_NO_THROW(
         const auto isConnected = stream_->connect(serverEndpoint_);
         EXPECT_TRUE(isConnected);
-
 
         const audio_stream::Data data = sendingData;
         const auto sentSize = stream_->send(data);
         EXPECT_EQ(sentSize, static_cast<uint32_t>(sendingData.size()));
 
+        sleep_for(2s);
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
+
+        ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
 
 TEST_F(ClientTest, send_larg_buffer_interrupted)
 {
-    ASSERT_TRUE(filesystem::exists("server.js"));
-    vector<char> sampleData = generateData(2 * 1024);
+    vector<char> sampleData = generateData(2 * 1024 - 371);
     vector<char> sendingData;
 
     ASSERT_NO_THROW(
         const auto isConnected = stream_->connect(serverEndpoint_);
         EXPECT_TRUE(isConnected);
 
-
-        for (uint32_t index = 0; index < 128; index++) {
+        for (uint32_t index = 0; index < 100; index++) {
             const audio_stream::Data data = sampleData;
             const auto sentSize = stream_->send(data);
             EXPECT_EQ(sentSize, sampleData.size());
 
             sendingData.insert(sendingData.end(), sampleData.begin(), sampleData.end());
-            sleep_for(100ms);
+            sleep_for(10ms);
         }
 
+        sleep_for(2s);
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
+
+        ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
 
 TEST_F(ClientTest, send_small_audio)
 {
-    ASSERT_TRUE(filesystem::exists("server.js"));
-    vector<char> sendingData = readFile("glass.wav");
+    vector<char> sendingData = readFile(audioFilePath_);
 
     ASSERT_NO_THROW(
         const auto isConnected = stream_->connect(serverEndpoint_);
@@ -272,37 +287,42 @@ TEST_F(ClientTest, send_small_audio)
 
         const audio_stream::Data data = sendingData;
         const auto sentSize = stream_->send(data);
-        EXPECT_EQ(sentSize, sendingData.size());
+        EXPECT_EQ(sentSize, sendingData.size());    
 
+        sleep_for(1s);
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
+
+        ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
 
 TEST_F(ClientTest, send_several_audios)
 {
-    ASSERT_TRUE(filesystem::exists("server.js"));
-    vector<char> sampleData = readFile("glass.wav");
+    vector<char> sampleData = readFile(audioFilePath_);
     vector<char> sendingData;
 
     ASSERT_NO_THROW(
         const auto isConnected = stream_->connect(serverEndpoint_);
         EXPECT_TRUE(isConnected);
 
-        for (uint32_t index = 0; index < 1024; index++) {
+        for (uint32_t index = 0; index < 1; index++) {
             const audio_stream::Data data = sampleData;
             const auto sentSize = stream_->send(data);
             EXPECT_EQ(sentSize, sampleData.size());
 
             sendingData.insert(sendingData.begin(), sampleData.begin(), sampleData.end());
-            sleep_for(100ms);
+            sleep_for(10ms);
         }
 
+        sleep_for(1s);
         stream_->disconnect();
         EXPECT_FALSE(stream_->isConnected());
+
+        ASSERT_TRUE(verifyFile(receivedFilePath_, sendingData));
     );
 }
-*/
+
 int main()
 {
     testing::InitGoogleTest();
