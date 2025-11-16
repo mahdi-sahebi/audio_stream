@@ -19,13 +19,13 @@ struct ClientData
     audio_stream::Client* client;
 };
 
-bool shouldClose_ = false;
 namespace audio_stream
 {
     
     Client::Client(uint32_t poolSize) :
         isRun_{false}, 
         isConnected_{false},
+        closeRequested_{false},
         websocket_{nullptr}, 
         context_{nullptr}
     {
@@ -34,6 +34,13 @@ namespace audio_stream
         }
     }
     
+    Client::~Client()
+    {
+        if (isConnected()) {
+            disconnect();
+        }
+    }
+
     bool Client::connect(Endpoint endpoint, uint32_t timeoutMS)
     {
         // TODO(MN): double connect
@@ -41,6 +48,7 @@ namespace audio_stream
 
         // TODO(MN): Reset connection flags
         setConnectionStatus(false);
+        closeRequested_ = false;// TODO(MN): Member of class
         setRunStatus(true);
 
         serviceThread_ = async(launch::async, [&]() {// TODO(MN): Private function
@@ -57,10 +65,9 @@ namespace audio_stream
         
             context_ = lws_create_context(&info);
             if (nullptr == context_) {
-                // TODO(MN): Stop immediately
                 throw Exception::Connection("Failed to create context");
             }
-            lws_cancel_service(context_);
+            lws_cancel_service(context_);// TODO(MN): If wait here so much,?
         
             struct lws_client_connect_info conn_info = {};
             conn_info.context        = context_;
@@ -75,19 +82,16 @@ namespace audio_stream
             websocket_ = lws_client_connect_via_info(&conn_info);
             if (nullptr == websocket_) {
                 lws_context_destroy(context_);
-                // TODO(MN): Stop immediately
-                return;// false;
+                return;
             }
     
             auto clientData = static_cast<ClientData*>(lws_wsi_user(websocket_));
             clientData->client = this;
 
-
             // TOOD(MN): Wait for connect(timeout)
             while (!isConnected()) {
                 lws_service(context_, 100);
             }
-            cout << "Connected to server" << endl;
 
             while (isRun()) {
                 lws_service(context_, 100);
@@ -98,31 +102,13 @@ namespace audio_stream
 
                 if (getBufferSize()) {
                     unique_lock<mutex> lock(sendMutex_);
-
-                    cout << "[SND]: " << getBufferSize() << endl;
                     auto data = readBuffer();// TODO(MN): Avoid copy
                     sendBuffer(data);
                     sendCV_.notify_all();
                 }
-
             }
 
-cout << "End of loop" << endl;
-            // lws_callback_on_writable(websocket_);// TODO(MN): Thread-safe?
-
-//             lws_close_reason(websocket_, LWS_CLOSE_STATUS_GOINGAWAY, nullptr, 0);
-// lws_cancel_service(context_);
-
-        //     // TODO(MN): handle timeout if server doesn't respond to close
-            // lws_close_reason(websocket_, LWS_CLOSE_STATUS_NORMAL, (unsigned char*)"done", 4);
-        // lws_cancel_service(context_);  // Wake up service thread
-            // lws_context_destroy(context_);// TODO(MN): freeResources/allocResources
-            // while (1) {// TODO(MN): Wait for complete close
-            //     // lws_service(context_, 10);// Expected that LWS_CLOSE be called
-            //     sleep_for(100ms);
-            // }
             context_ = nullptr;
-            // setConnectionStatus(false);
         });
 
         unique_lock<mutex> connectionLock(connectionMutex_);
@@ -136,17 +122,14 @@ cout << "End of loop" << endl;
     
     void Client::disconnect()
     {
-        if (!isRun()) {
+        if (!isConnected()) {
             throw Exception::Connection("Already disconnected");
         }
         
         waitForSend();
-        shouldClose_ = true;
+        closeRequested_ = true;
         lws_callback_on_writable(websocket_);// TODO(MN): Thread-safe?
-        // lws_cancel_service(context_);// TODO(MN): Is it thread-safe?
-        // setRunStatus(false);
         serviceThread_.get();
-        cout << "Disconnected from server" << endl;
     }
     
     void Client::waitForSend()
@@ -155,10 +138,6 @@ cout << "End of loop" << endl;
         sendCV_.wait(lock, [&]() {
             return (0 == getBufferSize());
         });
-
-        if (0 != getBufferSize()) {// && (false == isSending_)) {
-            cout << "error" << endl;
-        }
     }
 
     void Client::setConnectionStatus(bool enable)
@@ -283,28 +262,24 @@ cout << "End of loop" << endl;
         case LWS_CALLBACK_CLIENT_WRITEABLE: {
             clientData->client->setConnectedSocket(wsi);
             
-            if (shouldClose_) {
+            if (clientData->client->closeRequested_) {
                 lws_close_reason(wsi, LWS_CLOSE_STATUS_NORMAL,
                                  (unsigned char*)"done", 4);
-                return -1; // triggers LWS_CALLBACK_CLOSED
+                return -1;
             }
 
             break;
         } case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
             break;
         } case LWS_CALLBACK_EVENT_WAIT_CANCELLED: {
-            cout << "CCCCCCCCCCCancelllllllll" << endl;
             break;
         } case LWS_CALLBACK_CLOSED: {
-            cout << "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCC losed" << endl;
             clientData->client->setConnectionStatus(false);
             lws_cancel_service(clientData->client->context_);// TODO(MN): Is it thread-safe?
             break;
         } case LWS_CALLBACK_WSI_DESTROY: {
-            cout << "DDDDDDDDDDDDDdestory" << endl;
             clientData->client->setConnectionStatus(false);
             lws_cancel_service(clientData->client->context_);// TODO(MN): Is it thread-safe?
-
             break;
         } default:
             break;
