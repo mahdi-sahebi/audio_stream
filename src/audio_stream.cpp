@@ -108,6 +108,9 @@ namespace audio_stream
                 }
             }
 
+            if (nullptr == websocket_) {
+                lws_context_destroy(context_);
+            }
             context_ = nullptr;
         });
 
