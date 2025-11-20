@@ -52,6 +52,14 @@ protected:
         stream_ = nullptr;
     }
 
+    uint32_t randomRange(uint32_t begin, uint32_t end)
+    {
+        std::mt19937 range(static_cast<unsigned int>(std::time(nullptr)));
+        std::uniform_int_distribution<uint32_t> dist(begin, end);
+    
+        return static_cast<uint32_t>(dist(range));
+    }
+
     void startServer()
     {
         serverPID_ = 0;
@@ -109,9 +117,7 @@ protected:
     bool verifyFile(const string& filePath, const vector<char>& data)
     {
         /* Let the server flush the file */
-        const auto waitTimeMS = data.size() / 100;
-        cout << "Wait " << waitTimeMS << "ms for generating file..." << endl;
-        sleep_for(milliseconds(waitTimeMS));
+        sleep_for(1s);
 
         if (!filesystem::exists(filePath)) {
             cout << "File not exists" << endl;
@@ -134,6 +140,11 @@ protected:
         return (0 == memcmp(temp.data(), data.data(), data.size()));
     }
     
+    void showProgress(uint32_t iterationIndex, uint32_t iterationCount)
+    {
+        cout << (100 * (iterationIndex + 1) / (float)iterationCount) << "%" << endl;
+    }
+
     vector<char> readFile(const string& filePath)
     {
         vector<char> data;
@@ -156,11 +167,8 @@ protected:
     vector<char> generateData(uint32_t size) {
         vector<char> data(size, 0);
     
-        std::mt19937 range(static_cast<unsigned int>(std::time(nullptr)));
-        std::uniform_int_distribution<int> dist(32, 126);
-    
         for (uint32_t index = 0; index < size; index++) {
-            data[index] = static_cast<char>(dist(range));
+            data[index] = randomRange(32, 126);
         }
     
         return data;
@@ -186,16 +194,23 @@ TEST_F(ClientTest, connect_to_not_ready_server)
     constexpr auto TEST_COUNT = 20;
 
     for (uint32_t testIndex = 0; testIndex < TEST_COUNT; testIndex++) {
+        const auto timeoutMS = randomRange(50, 1000);
+        const auto beginTime = high_resolution_clock::now();
         EXPECT_NO_THROW(
-            const auto isConnected = stream_->connect(audio_stream::Endpoint("255.255.255.255", 9999), 100);
+            const auto isConnected = stream_->connect(audio_stream::Endpoint("255.255.255.255", 9999), timeoutMS);
             ASSERT_FALSE(isConnected);
         );
+        const auto endTime = high_resolution_clock::now();
+        auto durationMS = duration_cast<milliseconds>(endTime - beginTime).count();
+        EXPECT_LT(durationMS, timeoutMS * 1.15F);
 
         EXPECT_THROW(
             stream_->disconnect();
         , audio_stream::Exception::Connection);
 
         ASSERT_FALSE(stream_->isConnected());
+
+        showProgress(testIndex, TEST_COUNT);
     }
 }
 
@@ -211,6 +226,7 @@ TEST_F(ClientTest, connect_to_ready_server)
 
             stream_->disconnect();
             EXPECT_FALSE(stream_->isConnected());
+            showProgress(testIndex, TEST_COUNT);
         );
     }
 }
@@ -261,6 +277,7 @@ TEST_F(ClientTest, send_large_buffer)
 
 TEST_F(ClientTest, send_larg_buffer_interrupted)
 {
+    constexpr auto SEGMENT_COUNT = 100;
     vector<char> sampleData = generateData(2 * 1024 - 371);
     vector<char> sendingData;
 
@@ -268,13 +285,14 @@ TEST_F(ClientTest, send_larg_buffer_interrupted)
         const auto isConnected = stream_->connect(serverEndpoint_);
         EXPECT_TRUE(isConnected);
 
-        for (uint32_t index = 0; index < 100; index++) {
+        for (uint32_t index = 0; index < SEGMENT_COUNT; index++) {
             const audio_stream::Data data = sampleData;
             const auto sentSize = stream_->send(data);
             EXPECT_EQ(sentSize, sampleData.size());
 
             sendingData.insert(sendingData.end(), sampleData.begin(), sampleData.end());
             sleep_for(10ms);
+            showProgress(index, SEGMENT_COUNT);
         }
 
         sleep_for(2s);
@@ -307,6 +325,7 @@ TEST_F(ClientTest, send_small_audio)
 
 TEST_F(ClientTest, send_several_audios)
 {
+    constexpr auto TEST_COUNT = 100;
     vector<char> sampleData = readFile(audioFilePath_);
     vector<char> sendingData;
 
@@ -314,13 +333,14 @@ TEST_F(ClientTest, send_several_audios)
         const auto isConnected = stream_->connect(serverEndpoint_);
         EXPECT_TRUE(isConnected);
 
-        for (uint32_t index = 0; index < 1; index++) {
+        for (uint32_t testIndex = 0; testIndex < TEST_COUNT; testIndex++) {
             const audio_stream::Data data = sampleData;
             const auto sentSize = stream_->send(data);
             EXPECT_EQ(sentSize, sampleData.size());
 
             sendingData.insert(sendingData.begin(), sampleData.begin(), sampleData.end());
             sleep_for(10ms);
+            showProgress(testIndex, TEST_COUNT);
         }
 
         sleep_for(1s);
