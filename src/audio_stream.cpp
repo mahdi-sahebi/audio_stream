@@ -129,7 +129,7 @@ namespace audio_stream
             throw Exception::Connection("Already disconnected");
         }
         
-        waitForSend();
+        // waitForSend(); // TODO(MN): not for disconnect
         closeRequested_ = true;
         lws_callback_on_writable(websocket_);// TODO(MN): Thread-safe?
         serviceThread_.get();
@@ -167,7 +167,7 @@ namespace audio_stream
         return isConnected_;
     }
     
-    uint32_t Client::send(const Data& data)
+    uint32_t Client::send(const Data& data)// TODO(MN): Add timeout
     {
         // TODO(MN): Thread-safe. check inputs and connection
         if (!isConnected()) {
