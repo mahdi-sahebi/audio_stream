@@ -6,6 +6,7 @@
 !include/
 !src/
 !test/
+!CMakeLists.txt
 !LICENSE
 !.gitignore
 !README.MD
