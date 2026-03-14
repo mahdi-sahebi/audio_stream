@@ -5,14 +5,14 @@
 #include <cstdint>
 #include <string>
 #include <memory>
-#include <span>
+#include <vector>
 #include <functional>
 #include <stdexcept>
 
 
 namespace audio_stream
 {
-    using Data = std::span<char>;
+    using Data = std::vector<char>;
 
     struct Endpoint 
     {

@@ -23,13 +23,15 @@ add_library(${LIB} STATIC ${SOURCES} ${HEADERS})
 
 # Include Directories
 target_include_directories(${LIB}
-    PUBLIC ${PUBLIC_INCLUDE_DIR}
+    PUBLIC 
+    ${PROJECT_SOURCE_DIR}/deps/libwebsockets
+    ${PUBLIC_INCLUDE_DIR}
 )
 
 
 # Libraries
 target_link_libraries(${LIB}
-    PRIVATE websockets
+    PUBLIC websockets
 )
 
 
