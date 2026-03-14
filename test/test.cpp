@@ -242,7 +242,7 @@ TEST_F(ClientTest, send_small_buffer)
         EXPECT_TRUE(stream_->isConnected());
 
         string message = "$ test & example @ text ^"; 
-        const audio_stream::Data data(message.data(), message.size());
+        const audio_stream::Data data(message.begin(), message.end());
         const auto sentSize = stream_->send(data);
         EXPECT_EQ(sentSize, static_cast<uint32_t>(message.size()));
 
